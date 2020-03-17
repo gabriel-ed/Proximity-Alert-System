@@ -17,19 +17,24 @@ yellowPin = 'D12';
 greenPin = 'D8';
 pinMode = 'DigitalOutput';
 
-
-N = 1000;     %number of data-points to take (iterations)
+N = 150;     %number of data-points to take (iterations)
+L = 5;       %window size for moving average filter
 
 x = 1:N;
-y = zeros(1, N);
+y = zeros(1, N); 
+y_filt = zeros(1, N);
 h = animatedline;
-a = arduino(port, board);
+ard = arduino(port, board);
 
-configurePin(a, redPin, pinMode);
-configurePin(a, yellowPin, pinMode);
-configurePin(a, greenPin, pinMode);
+%constants for moving average (filter())
+b = ones(1, L)/L;
+a = 1;
 
-ultrasonicObj = ultrasonic(a, trigPin, echoPin);
+configurePin(ard, redPin, pinMode);
+configurePin(ard, yellowPin, pinMode);
+configurePin(ard, greenPin, pinMode);
+
+ultrasonicObj = ultrasonic(ard, trigPin, echoPin);
 
 for i = 1:N
     y(i) = readDistance(ultrasonicObj);
@@ -37,24 +42,34 @@ for i = 1:N
     ylabel('Distance (meters)');
     addpoints(h, x(i), y(i));
     drawnow;
+    
     if y(i) > 1
-        writeDigitalPin(a, greenPin, 1);
-        writeDigitalPin(a, yellowPin, 0);
-        writeDigitalPin(a, redPin, 0);
+        writeDigitalPin(ard, greenPin, 1);
+        writeDigitalPin(ard, yellowPin, 0);
+        writeDigitalPin(ard, redPin, 0);
     elseif y(i) > 0.5 && y(i) < 0.9
-        writeDigitalPin(a, greenPin, 0);
-        writeDigitalPin(a, yellowPin, 1);
-        writeDigitalPin(a, redPin, 0);
+        writeDigitalPin(ard, greenPin, 0);
+        writeDigitalPin(ard, yellowPin, 1);
+        writeDigitalPin(ard, redPin, 0);
     else
-        writeDigitalPin(a, greenPin, 0);
-        writeDigitalPin(a, yellowPin, 0);
-        writeDigitalPin(a, redPin, 1);
+        writeDigitalPin(ard, greenPin, 0);
+        writeDigitalPin(ard, yellowPin, 0);
+        writeDigitalPin(ard, redPin, 1);
     end 
-        
+
 end
 
-writeDigitalPin(a, greenPin, 0);
-writeDigitalPin(a, yellowPin, 0);
-writeDigitalPin(a, redPin, 0);
+writeDigitalPin(ard, greenPin, 0);
+writeDigitalPin(ard, yellowPin, 0);
+writeDigitalPin(ard, redPin, 0);
 
-
+y_filt = filter(b, a, y);
+figure('Name', 'Ultrasonic Distance Sensor Project');
+hold on
+plot(x, y);
+plot(x, y_filt);
+xlabel('Iteration');
+ylabel('Distance (meters)');
+title('Ultrasonic Distance output');
+legend({'Raw data', 'Filtered data'}, 'Location', 'northwest');
+hold off;
